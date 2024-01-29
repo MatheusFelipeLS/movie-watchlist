@@ -1,0 +1,6 @@
+# Arquivos a serem ignorados
+.env
+
+# Diretório que deve ser ignorado recursivamente
+__pycache__
+env
