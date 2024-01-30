@@ -10,9 +10,12 @@ pages = Blueprint(
 
 @pages.route("/")
 def index(): 
+    movie_data = current_app.db.movies.find({}) #o movies n obrigatoriamente é o nome da pasta do db. Se na hora de inserir um filme fosse movie, nessa linha deveria ser movie
+    movies = [Movie(**movie) for movie in movie_data]
     return render_template(
         "index.html",
-        title="Movies watchlist"
+        title="Movies watchlist",
+        movies_data=movies
     )
     
     
@@ -28,7 +31,7 @@ def add_movie():
             year=form.year.data
         )
         
-        current_app.db.movie.insert_one(asdict(movie))
+        current_app.db.movies.insert_one(asdict(movie))
         return redirect(url_for(".index"))
     
     return render_template(
