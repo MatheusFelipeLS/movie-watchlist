@@ -12,7 +12,7 @@ from flask import (
     url_for, 
     request,
 )
-from movie_library.forms import RegisterForm, MovieForm, ExtendedMovieForm
+from movie_library.forms import RegisterForm, LoginForm, MovieForm, ExtendedMovieForm
 from movie_library.models import User, Movie
 from passlib.hash import pbkdf2_sha256
 
@@ -52,11 +52,38 @@ def register():
         
         flash("User registered sucessfully", "sucess")
         
-        return redirect(url_for(".index"))
+        return redirect(url_for(".login"))
     
     return render_template(
         "register.html", title="Movies Watchlist - Registrar", form=form
     )
+    
+
+@pages.route("/login", methods=["GET", "POST"])
+def login():
+    if session.get("email"):
+        return redirect(url_for(".index"))
+    
+    form = LoginForm()
+    
+    if form.validate_on_submit():
+        users_data = current_app.db.user.find_one({"email": form.email.data})
+        if not users_data:
+            flash("Credenciais não estão corretas", category="danger")
+            return redirect(url_for(".login"))
+        
+        user = User(**users_data)
+        
+        if user and pbkdf2_sha256.verify(form.password.data, user.password):
+            session["user_id"] = user._id
+            session["email"] = user.email
+            
+            return redirect(url_for(".index"))
+        
+        flash("Credenciais não estão corretas", category="danger")
+        
+    return render_template("login.html", title="Movie Watchlist - Login", form=form)
+            
     
     
 @pages.route("/add", methods=["GET", "POST"])
@@ -107,6 +134,7 @@ def edit_movie(_id: str):
     
     print("c ", asdict(movie))
     return render_template("movie_form.html", movie=movie, form=form)
+
 
 @pages.get("/movie/<string:_id>/rate")
 def rate_movie(_id):

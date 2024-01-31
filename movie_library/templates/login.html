@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block main_content %}
-    <form name="register" method="post" novalidate class="form">
+    <form name="login" method="post" novalidate class="form">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% for category, message in messages %}
                 <span class="form__flash form__flash--{{ category }}"> {{ message }}</span>
@@ -18,10 +18,9 @@
 
             {{ render_text_fields(form.email) }}
             {{ render_text_fields(form.password) }}
-            {{ render_text_fields(form.confirm_password) }}
 
             <span class="form__small">
-                Já tem uma conta? <a href="{{ url_for('pages.login') }}" class="form__link">Entre aqui</a>
+                Não tem uma conta? <a href="{{ url_for('pages.register') }}" class="form__link">Crie agora</a>
             </span>
             
             <div>
