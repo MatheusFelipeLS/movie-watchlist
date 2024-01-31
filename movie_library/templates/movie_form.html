@@ -10,6 +10,7 @@
     <form name="add_movie" method="post" novalidate class="form">
         <div class="form__container">
             {{ form.hidden_tag() }} <!--adicionar isso por questões de segurança-->
+            
             {{ render_text_fields(form.title) }}
             {{ render_text_fields(form.director) }}
             {{ render_text_fields(form.year) }}

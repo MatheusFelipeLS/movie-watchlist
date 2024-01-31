@@ -1,0 +1,32 @@
+{% from "macros/fields.html" import render_text_fields %}
+
+{% extends "layout.html" %}
+
+{% block head_content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/forms.css') }}">
+{% endblock %}
+
+{% block main_content %}
+    <form name="register" method="post" novalidate class="form">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <span class="form__flash form__flash--{{ category }}"> {{ message }}</span>
+            {% endfor %}
+        {% endwith %}
+        <div class="form__container">
+            {{ form.hidden_tag() }} <!--adicionar isso por questões de segurança-->
+
+            {{ render_text_fields(form.email) }}
+            {{ render_text_fields(form.password) }}
+            {{ render_text_fields(form.confirm_password) }}
+
+            <span class="form__small">
+                Já tem uma conta? <a href="#" class="form__link">Entre aqui</a>
+            </span>
+            
+            <div>
+                {{ form.submit(class_="button button--form") }}
+            </div>
+        </div>
+    </form>
+{% endblock %}

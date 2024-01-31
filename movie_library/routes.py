@@ -1,22 +1,61 @@
 import uuid
 import datetime 
-from flask import Blueprint, render_template,session, redirect, request, current_app, url_for
 from dataclasses import asdict
-from movie_library.forms import MovieForm, ExtendedMovieForm
-from movie_library.models import Movie
+
+from flask import (
+    Blueprint,
+    current_app, 
+    flash,
+    redirect,
+    render_template, 
+    session,
+    url_for, 
+    request,
+)
+from movie_library.forms import RegisterForm, MovieForm, ExtendedMovieForm
+from movie_library.models import User, Movie
+from passlib.hash import pbkdf2_sha256
+
 
 pages = Blueprint(
     "pages", __name__, template_folder="templates", static_folder="static"
 )
 
+
 @pages.route("/")
 def index(): 
     movie_data = current_app.db.movies.find({}) #o movies n obrigatoriamente é o nome da pasta do db. Se na hora de inserir um filme fosse movie, nessa linha deveria ser movie
     movies = [Movie(**movie) for movie in movie_data]
+    
     return render_template(
         "index.html",
         title="Movies watchlist",
         movies_data=movies
+    )
+    
+
+@pages.route("/register", methods=["GET", "POST"])
+def register():
+    if session.get("email"):
+        return redirect(url_for(".index"))
+    
+    form = RegisterForm()
+    
+    if form.validate_on_submit():
+        user = User(
+            _id=uuid.uuid4().hex,
+            email=form.email.data,
+            password=pbkdf2_sha256.hash(form.password.data),
+        )
+        
+        current_app.db.user.insert_one(asdict(user))
+        
+        flash("User registered sucessfully", "sucess")
+        
+        return redirect(url_for(".index"))
+    
+    return render_template(
+        "register.html", title="Movies Watchlist - Registrar", form=form
     )
     
     
@@ -29,45 +68,45 @@ def add_movie():
             _id=uuid.uuid4().hex,
             title=form.title.data,
             director=form.director.data,
-            year=form.year.data
+            year=form.year.data,
         )
         
         current_app.db.movies.insert_one(asdict(movie))
-        return redirect(url_for(".index"))
+        
+        return redirect(url_for(".movie", _id=movie._id))
     
     return render_template(
-        "new_movie.html", 
-        title="Movie Watchlist - Add Movie", 
-        form=form
+        "new_movie.html", title="Movie Watchlist - Add Movie", form=form
     )
     
+    
+@pages.get("/movie/<string:_id>")
+def movie(_id: str):
+    movie = Movie(**current_app.db.movies.find_one({"_id": _id}))
+    return render_template("movie_details.html", movie=movie)
+
 
 @pages.route("/edit/<string:_id>", methods=["GET", "POST"])
 def edit_movie(_id: str):
     movie = Movie(**current_app.db.movies.find_one({"_id": _id}))
     form = ExtendedMovieForm(obj=movie) #obj faz com que os campos correspondentes sejam iguais. title = title, director = director...
     if form.validate_on_submit():
-        movie.title=form.title.data,
-        movie.director=form.director.data,
-        movie.year=form.year.data
+        movie.title = form.title.data
+        movie.director = form.director.data
+        movie.year = form.year.data
         movie.cast = form.cast.data
         movie.series = form.series.data
         movie.tags = form.tags.data
         movie.description = form.description.data
         movie.video_link = form.video_link.data
         
+        print("d ", asdict(movie))
         current_app.db.movies.update_one({"_id": movie._id}, {"$set": asdict(movie)})
+        print("b ", asdict(movie))
         return redirect(url_for(".movie", _id=movie._id))
     
+    print("c ", asdict(movie))
     return render_template("movie_form.html", movie=movie, form=form)
-
-    
-@pages.get("/movie/<string:_id>")
-def movie(_id: str):
-    movie_data = current_app.db.movies.find_one({"_id": _id})
-    movie = Movie(**movie_data)
-    return render_template("movie_details.html", movie=movie)
-
 
 @pages.get("/movie/<string:_id>/rate")
 def rate_movie(_id):
