@@ -1,5 +1,6 @@
 import uuid
 import datetime 
+import functools
 from dataclasses import asdict
 
 from flask import (
@@ -22,9 +23,24 @@ pages = Blueprint(
 )
 
 
+def login_required(route):
+    @functools.wraps(route)
+    def route_wrapper(*args, **kwargs):
+        if session.get("email") is None:
+            return redirect(url_for(".login"))
+        
+        return route(*args, **kwargs)
+    
+    return route_wrapper
+    
+
+
 @pages.route("/")
+@login_required
 def index(): 
-    movie_data = current_app.db.movies.find({}) #o movies n obrigatoriamente é o nome da pasta do db. Se na hora de inserir um filme fosse movie, nessa linha deveria ser movie
+    user_data = current_app.db.user.find_one({"email": session["email"]})
+    user = User(**user_data)
+    movie_data = current_app.db.movies.find({"_id": {"$in": user.movies}}) #o movies n obrigatoriamente é o nome da pasta do db. Se na hora de inserir um filme fosse movie, nessa linha deveria ser movie
     movies = [Movie(**movie) for movie in movie_data]
     
     return render_template(
@@ -84,9 +100,16 @@ def login():
         
     return render_template("login.html", title="Movie Watchlist - Login", form=form)
             
+
+@pages.route("/logout")
+def logout():
+    session.clear()
+    
+    return redirect(url_for(".login"))
     
     
 @pages.route("/add", methods=["GET", "POST"])
+@login_required
 def add_movie():
     form = MovieForm()
     
@@ -99,6 +122,9 @@ def add_movie():
         )
         
         current_app.db.movies.insert_one(asdict(movie))
+        current_app.db.user.update_one(
+            {"_id": session["user_id"]}, {"$push": {"movies":movie._id}}
+        )
         
         return redirect(url_for(".movie", _id=movie._id))
     
@@ -114,6 +140,7 @@ def movie(_id: str):
 
 
 @pages.route("/edit/<string:_id>", methods=["GET", "POST"])
+@login_required
 def edit_movie(_id: str):
     movie = Movie(**current_app.db.movies.find_one({"_id": _id}))
     form = ExtendedMovieForm(obj=movie) #obj faz com que os campos correspondentes sejam iguais. title = title, director = director...
@@ -137,6 +164,7 @@ def edit_movie(_id: str):
 
 
 @pages.get("/movie/<string:_id>/rate")
+@login_required
 def rate_movie(_id):
     rating = int(request.args.get("rating"))
     current_app.db.movies.update_one({"_id": _id}, {"$set": {"rating": rating}})
@@ -145,6 +173,7 @@ def rate_movie(_id):
 
 
 @pages.get("/movie/<string:_id>/watch")
+@login_required
 def watch_today(_id):
     current_app.db.movies.update_one({"_id": _id}, {"$set": {"last_watched": datetime.datetime.today()}})
     return redirect(url_for(".movie", _id=_id))
