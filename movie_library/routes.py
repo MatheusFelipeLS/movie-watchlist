@@ -154,12 +154,9 @@ def edit_movie(_id: str):
         movie.description = form.description.data
         movie.video_link = form.video_link.data
         
-        print("d ", asdict(movie))
         current_app.db.movies.update_one({"_id": movie._id}, {"$set": asdict(movie)})
-        print("b ", asdict(movie))
         return redirect(url_for(".movie", _id=movie._id))
     
-    print("c ", asdict(movie))
     return render_template("movie_form.html", movie=movie, form=form)
 
 
